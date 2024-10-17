@@ -4,12 +4,14 @@ import com.example.comments.CommentsApplication;
 import com.example.comments.domains.models.User;
 import com.example.comments.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @RestController
@@ -21,24 +23,18 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    @PostMapping("/add")
-    public User addNewUser (@RequestBody User user) {
-
-        System.out.println(user);
-
-        User userResponse =  userRepository.save(user);
-        userRepository.findAll().forEach(usera -> {
-            log.info(usera.toString());
-
-        });
-        return userResponse;
+    @PostMapping
+    public ResponseEntity<User> addNewUser (@RequestBody User user) {
+        userRepository.save(user);
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/{id}")
-    public User getUser (@PathVariable Long id) {
+    public ResponseEntity<User> getUser (@PathVariable Long id) {
 
-        var getUser = userRepository.findById(id).orElse(null);
-        return getUser;
+        Optional<User> existingUser = userRepository.findById(id);
+
+        return existingUser.isPresent() ? ResponseEntity.ok(existingUser.get()) : ResponseEntity.notFound().build();
     }
 
     @GetMapping
@@ -46,9 +42,29 @@ public class UserController {
         return userRepository.findAll();
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updateUser){
+        Optional<User> existingUser = userRepository.findById(id);
+        if(existingUser.isPresent()){
+            User user = existingUser.get();
+            user.setName(updateUser.getName());
+            user.setEmail(updateUser.getEmail());
+            userRepository.save(user);
+            return ResponseEntity.ok(user);
+        }else{
+            return ResponseEntity.notFound().build();
+        }
+    }
 
-
-
-
+    @DeleteMapping("/{id}")
+    public ResponseEntity<List<User>> deleteUser(@PathVariable Long id){
+        Optional<User> existingUser = userRepository.findById(id);
+        if(existingUser.isPresent()) {
+            userRepository.deleteById(id);
+            return ResponseEntity.ok(userRepository.findAll());
+        }else{
+            return ResponseEntity.notFound().build();
+        }
+    }
 
 }
